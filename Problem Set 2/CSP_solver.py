@@ -43,15 +43,23 @@ def minimum_remaining_values(problem: Problem, domains: Dict[str, set]) -> str:
 #            since they contain the current domains of unassigned variables only.
 def forward_checking(problem: Problem, assigned_variable: str, assigned_value: Any, domains: Dict[str, set]) -> bool:
     #TODO: Write this function
+    # Iterate over each constraint in the problem
     for c in problem.constraints:
+        # Check if the constraint is a binary constraint and involves the assigned variable
         if isinstance(c, BinaryConstraint) and assigned_variable in c.variables:
+            # Get the other variable involved in the constraint
             other_variable = c.get_other(assigned_variable)
+            # Skip if the other variable has no domain (already assigned)
             if not domains.get(other_variable):
                 continue
-            new_domain = {value for value in domains.get(other_variable) if c.is_satisfied({assigned_variable : assigned_value,other_variable:value})}
-            domains.update({other_variable : new_domain})
+            # get the values in the other variable's domain that only include values that satisfy the constraint
+            new_domain = {value for value in domains.get(other_variable) if c.is_satisfied({assigned_variable: assigned_value, other_variable: value})}
+            # Update the domain of the other variable
+            domains.update({other_variable: new_domain})
+            # If the any new domain is empty, return False
             if not new_domain:
                 return False
+    # Return True if all variables have non-empty domains
     return True
 
 
@@ -67,19 +75,30 @@ def forward_checking(problem: Problem, assigned_variable: str, assigned_value: A
 #            since they contain the current domains of unassigned variables only.
 def least_restraining_values(problem: Problem, variable_to_assign: str, domains: Dict[str, set]) -> List[Any]:
     #TODO: Write this function
+    # Initialize a list to store the least restraining values
     lrv = []
+    # Iterate over each value in the domain of the variable to assign
     for v in domains.get(variable_to_assign):
+        # Create a copy of the domains to modify
         domains_copy = domains.copy()
+        # Iterate over each constraint in the problem
         for c in problem.constraints:
+            # Check if the constraint is a binary constraint and involves the variable to assign
             if isinstance(c, BinaryConstraint) and variable_to_assign in c.variables:
+                # Get the other variable involved in the constraint
                 other_variable = c.get_other(variable_to_assign)
+                # Skip if the other variable has no domain (already assigned)
                 if not domains.get(other_variable):
                     continue
-                new_domain = {value for value in domains.get(other_variable) if c.is_satisfied({variable_to_assign : v,other_variable:value})}
-                domains_copy.update({other_variable : new_domain})
+                # Update the other variable's domain to only include values that satisfy the constraint
+                new_domain = {value for value in domains.get(other_variable) if c.is_satisfied({variable_to_assign: v, other_variable: value})}
+                domains_copy.update({other_variable: new_domain})
         
+        # Append the value and the sum of the lengths of the domains of other variables to the list
         lrv.append((v, sum(len(domains_copy.get(other_variable)) for other_variable in domains_copy if other_variable != variable_to_assign)))
+    # Sort the list based on the sum of the lengths of the domains in descending order
     lrv.sort(key=lambda x: x[1], reverse=True)
+    # Return the values in the order of least restraining value
     return [value for value, _ in lrv]
         
 
@@ -94,17 +113,33 @@ def least_restraining_values(problem: Problem, variable_to_assign: str, domains:
 #            Also, if 1-Consistency deems the whole problem unsolvable, you shouldn't call "problem.is_complete" at all.
 def solve(problem: Problem) -> Optional[Assignment]:
     #TODO: Write this function
-    assignment: Assignment = {}
-    while True:
-        if not one_consistency(problem):
-            return None
+    def backtrack(assignment: Assignment ,  domains: Dict[str, set] ) -> Optional[Assignment]:
+        # if the assignment is complete return it we found the solution !!
         if problem.is_complete(assignment):
             return assignment
-        variable = minimum_remaining_values(problem, problem.domains)
-        lrv = least_restraining_values(problem, variable, problem.domains)
-        for value in lrv:
-            if forward_checking(problem, variable, value, problem.domains):
-                assignment.update({variable:value})
+        
+        variable = minimum_remaining_values(problem, domains) # get the variable with the minimum remaining values
+        lrvs = least_restraining_values(problem, variable, domains) # get the domain of the variable in order of least restraining value
+        
+        for val in lrvs:
+            new_assignment , new_d = assignment.copy() , domains.copy()
+            new_assignment[variable] = val
+            del new_d[variable] # remove the variable from the domains as it is assigned now
+            if forward_checking(problem, variable, val, new_d):
+                sol = backtrack(new_assignment, new_d)
+                if sol:
+                    return sol            
+        return None
+    #################################################################################
+    
+    if not one_consistency(problem):
+        return None
+    
+    return backtrack({}, problem.domains)
+    
+
+    
+    
         
         
                 

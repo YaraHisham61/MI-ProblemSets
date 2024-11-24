@@ -49,9 +49,27 @@ class CryptArithmeticProblem(Problem):
         #                       For the letters, the domain can only contain integers in the range [0,9].
         # problem.constaints:   should contain a list of constraint (either unary or binary constraints).
 
-        problem.variables = []
-        problem.domains = {}
-        problem.constraints = []
+        problem.variables = list(set(LHS0 + LHS1 + RHS)) # add all the letters to the variables
+        problem.domains = {x: set(range(10)) for x in problem.variables} # add the domain of each letter to be 0-9
+        problem.constraints = [BinaryConstraint((x,y) , lambda x , y : x != y) for x in problem.variables for y in problem.variables if x != y] #ensure unique value for each letter
+        problem.constraints += [UnaryConstraint(x , lambda v: v != 0) for x in (LHS0[-1], LHS1[-1], RHS[-1])] # the last letter of each term can't be zero
+
+        aux_variables_lhs = ['{}{}'.format(LHS0[i], LHS1[i]) for i in range (min(len(LHS0), len(LHS1)))] # aux variables for the sum of the LHS
+        problem.variables += aux_variables_lhs # adding aux variables of the LHS to the problem variables
+        problem.domains.update({x: set([(d1,d2)]) for x in aux_variables_lhs for d1 in problem.domains.get(x[0]) for d2 in problem.domains.get(x[1]) }) # adding the domain of aux variables to be d1 x d2
+
+        carry_list = ['C{}'.format(i) for i in range(1, min(len(LHS0), len(LHS1)))] # carry variables for each digit except the last one
+        if len(RHS) > min(len(LHS0), len(LHS1)):
+            carry_list.append('C{}'.format(len(carry_list) + 1)) # add an extra carry if RHS is longer than the LHS
+        
+        problem.variables += carry_list # adding carry variables to the problem variables
+        problem.domains.update({c: set([0,1]) for c in carry_list}) # adding the domain of carry variables to be 0,1
+
+        aux_variables_rhs = ['{}{}'.format(RHS[i], c) for i,c in enumerate(carry_list)]
+        problem.variables += aux_variables_rhs # adding aux variables of the RHS to the problem variables
+        # problem.domains.update({x: set([(d1,d2)]) for x in aux_variables_rhs for d1 in problem.domains.get(x[0]) for d2 in problem.domains.get(x[1]) })
+
+
         return problem
 
     # Read a cryptarithmetic puzzle from a file
