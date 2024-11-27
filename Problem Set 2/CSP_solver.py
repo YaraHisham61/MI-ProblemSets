@@ -97,7 +97,9 @@ def least_restraining_values(problem: Problem, variable_to_assign: str, domains:
         # Append the value and the sum of the lengths of the domains of other variables to the list
         lrv.append((v, sum(len(domains_copy.get(other_variable)) for other_variable in domains_copy if other_variable != variable_to_assign)))
     # Sort the list based on the sum of the lengths of the domains in descending order
-    lrv.sort(key=lambda x: x[1], reverse=True)
+    lrv.sort(key=lambda x: (x[1], x[0]), reverse=True)
+    # if multiple values have the same priority given the "least restraining value" heuristic, order them in ascending order
+    lrv.sort(key=lambda x: (-x[1], x[0]))
     # Return the values in the order of least restraining value
     return [value for value, _ in lrv]
         
