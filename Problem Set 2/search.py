@@ -140,7 +140,11 @@ def alphabeta_with_move_ordering(game: Game[S, A], state: S, heuristic: Heuristi
         terminal, terminal_values = game.is_terminal(state)
         # If the state is terminal, return the terminal value for the current agent and None for the action
         if terminal:
-            return terminal_values[agent_idx], None
+            # If it is the player's turn (max node), return the terminal value for the player
+            if agent_idx == 0:
+                return terminal_values[agent_idx], None
+            # If it is an enemy's turn (min node), return the negative terminal value for the player
+            return -terminal_values[agent_idx], None
 
         # If the maximum depth is reached
         if max_depth == 0:
@@ -208,9 +212,13 @@ def expectimax(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_dep
         # Check if the current state is terminal and get the terminal values
         terminal, terminal_values = game.is_terminal(state)
 
-        # If the state is terminal, return the terminal value for the current agent and None for the action
+        # If the state is terminal
         if terminal:
-            return terminal_values[agent_idx], None
+            # If it is the player's turn (max node), return the terminal value for the player
+            if agent_idx == 0:
+                return terminal_values[agent_idx], None
+            # If it is an enemy's turn (chance node), return the negative terminal value for the player
+            return -terminal_values[agent_idx], None
 
         # If the maximum depth is reached
         if max_depth == 0:
